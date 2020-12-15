@@ -3,14 +3,13 @@
 
 `xu::polykey_map<Value_T, Key_Ts...>` implements a container analogous to a table in a relational database where:
 
-- There is one value column and multiple nullable key columns
-
 | Key 1 | Key 2 | Value |
 | ----- | ----- | ----- |
 | 15 |  | "Hello" |
 |  | 'F' | ", " |
 | 16 | 'D' | "World!" |
 
+- There is one value column and multiple nullable key columns
 - Each row must have at least one valid key
 - Removal is at the row level, i.e. removing where key1=16 also results in the removal of key='D'
 - Keys are unique within a column
@@ -20,7 +19,9 @@
 Member functions take a column index as a template parameter and a key as a function parameter.
 
 `void insert<index>(key)`
+
 `Value_T& get<index>(key)`
+
 `bool contains<index>(key)`
 
 The link function takes an additional index and key.
