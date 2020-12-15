@@ -18,15 +18,13 @@
 
 Member functions take a column index as a template parameter and a key as a function parameter.
 
-`void insert<index>(key)`
-
-`Value_T& get<index>(key)`
-
-`bool contains<index>(key)`
+- `void insert<index>(key)`
+- `Value_T& get<index>(key)`
+- `bool contains<index>(key)`
 
 The link function takes an additional index and key.
 
-`void link<index1, index2>(key1, key2)`
+- `void link<index1, index2>(key1, key2)`
 
 New values are inserted with a single key. To add a new key for an existing value, the `link` function is used.
 
@@ -55,6 +53,11 @@ pkmap.get<Key2>('D') = "there!"
 pkmap.remove<Key1>(16);
 
 if (pkmap.contains<Key1>(17))
+{
+  ...
+}
+
+for (auto& s : pkmap)
 {
   ...
 }
