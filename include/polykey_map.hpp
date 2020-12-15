@@ -251,6 +251,14 @@ namespace xu
       {
         return underlying->second;
       }
+
+      /**
+        @brief  Arrow operator
+        */
+      Value_T* operator->()
+      {
+        return &underlying->second;
+      }
     };
 
     iterator begin()

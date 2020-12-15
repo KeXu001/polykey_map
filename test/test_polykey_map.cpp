@@ -76,7 +76,7 @@ int main()
   /* loop using iterator */
   for (auto it = otk.begin(); it != otk.end(); it++)
   {
-    if ((*it).ticker == "TSLA")
+    if (it->ticker == "TSLA")
     {
       it = otk.erase(it);
     }
