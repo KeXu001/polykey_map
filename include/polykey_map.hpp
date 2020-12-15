@@ -171,6 +171,8 @@ namespace xu
       */
     class iterator
     {
+      friend polykey_map;
+    protected:
       /**
         @brief  Type of the underlying iterator
         */
@@ -499,6 +501,25 @@ namespace xu
 
       /* finally, erase the value itself */
       ink_to_val.erase(ink);
+    }
+
+    /**
+      @brief  Remove a value using an iterator
+      @param  it
+              Valid iterator
+      */
+    iterator erase(const iterator& it)
+    {
+      /* first get the intermediate key */
+      intermediate_key_t ink = it.underlying->first;
+
+      /* then remove linked keys */
+      _erase(ink_to_keys.at(ink));
+
+      ink_to_keys.erase(ink);
+
+      /* finally, erase the value itself */
+      return ink_to_val.erase(it.underlying);
     }
 
   protected:

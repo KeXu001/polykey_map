@@ -53,35 +53,33 @@ int main()
 {
   OrderTracker otk;
 
+  /* insert */
   otk.insert<InternalOrderId>(13, Order{"AAPL", 100});
 
   otk.insert<InternalOrderId>(14, Order{"MSFT", -100});
 
+  otk.insert<InternalOrderId>(15, Order{"TSLA", 20});
+
   std::cout << otk.at<InternalOrderId>(13) << std::endl;
 
-
+  /* link */
   otk.link<InternalOrderId, ExternalOrderId>(13, "1337");
 
+  /* modify */
   otk.at<ExternalOrderId>("1337").svol = 50;
 
   std::cout << otk.at<InternalOrderId>(13) << std::endl;
 
-
+  /* erase */
   otk.erase<ExternalOrderId>("1337");
-
-  try
-  {
-    std::cout << otk.at<InternalOrderId>(13) << std::endl;
-  }
-  catch (std::out_of_range& err)
-  {
-    std::cout << "No order found" << std::endl;
-  }
 
   /* loop using iterator */
   for (auto it = otk.begin(); it != otk.end(); it++)
   {
-    std::cout << *it << std::endl;
+    if ((*it).ticker == "TSLA")
+    {
+      it = otk.erase(it);
+    }
   }
 
   /* loop using colon syntax */
