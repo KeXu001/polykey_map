@@ -133,17 +133,6 @@ namespace xu
     };
 
     /**
-      @brief  Error type thrown when inserting or linking keys
-      */
-    class key_conflict_error : public std::runtime_error
-    {
-    public:
-      explicit key_conflict_error(const std::string& what_arg)
-        : std::runtime_error(what_arg)
-      {}
-    };
-
-    /**
       @brief  Item type stored in ink_to_val
       */
     using ink_value_pair = std::pair<intermediate_key_t, Value_T>;
@@ -159,6 +148,118 @@ namespace xu
     template<unsigned int P>
     using key_ink_pair = std::pair<Path_T<P>, intermediate_key_t>;
 
+    /**
+      @brief  Error type thrown when inserting or linking keys
+      */
+    class key_conflict_error : public std::runtime_error
+    {
+    public:
+      explicit key_conflict_error(const std::string& what_arg)
+        : std::runtime_error(what_arg)
+      {}
+    };
+
+  public:
+    //  ========
+    //  Iterator
+    //  ========
+
+    /**
+      @brief  Iterator definition
+              Used to iterate through stored values. Does not contain any info
+              about keys.
+      */
+    class iterator
+    {
+      /**
+        @brief  Type of the underlying iterator
+        */
+      using underlying_t = typename std::unordered_map<intermediate_key_t, Value_T>::iterator;
+
+      /**
+        @brief  The underlying iterator for value access
+                Our iterator delegates behavior to this underlying iterator. The
+                only difference is that we return only the value (not a pair)
+        */
+      underlying_t underlying;
+
+    public:
+      /**
+        @brief  Construct iterator with underlying
+        */
+      iterator(underlying_t underlying_)
+        : underlying(underlying_)
+      {}
+
+      /**
+        @brief  Copy constructor
+        */
+      iterator(const iterator& other)
+        :underlying(other.underlying)
+      {}
+
+      /**
+        @brief  Assignment
+        */
+      iterator& operator=(const iterator& other)
+      {
+        underlying = other.underlying;
+        return *this;
+      }
+
+      /**
+        @brief  Prefix increment
+        */
+      iterator& operator++()
+      {
+        underlying++;
+        return *this;
+      }
+
+      /**
+        @brief  Postfix increment
+        */
+      iterator operator++(int)
+      {
+        iterator res = *this;
+        operator++();
+        return res;
+      }
+
+      /**
+        @brief  Equality
+        */
+      bool operator==(const iterator& other)
+      {
+        return underlying == other.underlying;
+      }
+
+      /**
+        @brief  Inequality
+        */
+      bool operator!=(const iterator& other)
+      {
+        return underlying != other.underlying;
+      }
+
+      /**
+        @brief  Dereference
+        */
+      Value_T& operator*()
+      {
+        return underlying->second;
+      }
+    };
+
+    iterator begin()
+    {
+      return iterator(ink_to_val.begin());
+    }
+
+    iterator end()
+    {
+      return iterator(ink_to_val.end());
+    }
 
   public:
     //  ======================

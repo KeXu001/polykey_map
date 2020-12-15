@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& stream, const Order& order)
   return stream << order.ticker << ":" << order.svol;
 }
 
-/* the firsrt argument is the type of the stored values */
+/* the first argument is the type of the stored values */
 using OrderTracker = xu::polykey_map<Order, InternalOrderId_t, ExternalOrderId_t>;
 
 int main()
@@ -66,7 +66,7 @@ int main()
 
   std::cout << otk.get<InternalOrderId>(13) << std::endl;
 
-
+  
   otk.remove<ExternalOrderId>("1337");
 
   try
@@ -76,5 +76,17 @@ int main()
   catch (std::out_of_range& err)
   {
     std::cout << "No order found" << std::endl;
+  }
+
+  /* loop using iterator */
+  for (auto it = otk.begin(); it != otk.end(); it++)
+  {
+    std::cout << *it << std::endl;
+  }
+
+  /* loop using colon syntax */
+  for (auto& order : otk)
+  {
+    std::cout << order << std::endl;
   }
 }
