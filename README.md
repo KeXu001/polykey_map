@@ -11,6 +11,7 @@
 
 - There is one value column and multiple nullable key columns
 - Each row must have at least one valid key
+- Value retrieval is done by specifying a key column and a valid key
 - Removal is at the row level, i.e. removing where key1=16 also results in the removal of key='D'
 - Keys are unique within a column
 
