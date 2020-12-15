@@ -65,7 +65,7 @@ int main()
   /* link */
   otk.link<InternalOrderId, ExternalOrderId>(13, "1337");
 
-  std::cout << otk.numKeys<InternalOrderId>() << " != " << otk.numKeys<ExternalOrderId>() << std::endl;
+  std::cout << otk.size<InternalOrderId>() << " != " << otk.size<ExternalOrderId>() << std::endl;
 
   /* modify */
   otk.at<ExternalOrderId>("1337").svol = 50;

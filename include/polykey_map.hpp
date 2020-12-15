@@ -312,7 +312,7 @@ namespace xu
               Path index
       */
     template<unsigned int P>
-    size_t numKeys()
+    size_t size()
     {
       return std::get<P>(key_to_ink).size();
     }
