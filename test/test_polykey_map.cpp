@@ -26,27 +26,55 @@
 #include <iostream>
 #include "polykey_map.hpp"
 
+enum Dim
+{
+  InternalOrderId,
+  ExternalOrderId
+};
+
+using InternalOrderId_t = unsigned long;
+using ExternalOrderId_t = std::string;
+
+struct Order
+{
+  std::string ticker;
+  int svol;
+};
+
+std::ostream& operator<<(std::ostream& stream, const Order& order)
+{
+  return stream << order.ticker << ":" << order.svol;
+}
+
+/* the firsrt argument is the type of the stored values */
+using OrderTracker = xu::polykey_map<Order, InternalOrderId_t, ExternalOrderId_t>;
+
 int main()
 {
-  /*
-    First variadic template argument is type of stored value (std::string)
-    Remaining arguments are key types
-  */
-  xu::polykey_map<std::string, long, std::string> pkmap;
+  OrderTracker otk;
 
-  pkmap.insert<0>(13l, "Value");
+  otk.insert<InternalOrderId>(13, Order{"AAPL", 100});
 
-  pkmap.get<0>(13l) = "New val";
+  otk.insert<InternalOrderId>(14, Order{"MSFT", -100});
 
-  std::cout << pkmap.get<0>(13l) << std::endl;
+  std::cout << otk.get<InternalOrderId>(13) << std::endl;
 
-  // pkmap.link<0, 1>(13l, "favor");
 
-  pkmap.link<1, 0>("favor", 13l);
+  otk.link<InternalOrderId, ExternalOrderId>(13, "1337");
 
-  std::cout << pkmap.get<1>("favor") << std::endl;
+  otk.get<ExternalOrderId>("1337").svol = 50;
 
-  // pkmap.remove<0>(13l);
+  std::cout << otk.get<InternalOrderId>(13) << std::endl;
 
-  std::cout << pkmap.get<1>("favor") << std::endl;
+
+  otk.remove<ExternalOrderId>("1337");
+
+  try
+  {
+    std::cout << otk.get<InternalOrderId>(13) << std::endl;
+  }
+  catch (std::out_of_range& err)
+  {
+    std::cout << "No order found" << std::endl;
+  }
 }

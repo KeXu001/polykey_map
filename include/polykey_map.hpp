@@ -33,44 +33,59 @@ namespace xu
     @brief  Many-to-one container class
             This class implements a container whose behavior is defined as
             follows:
-              - The container stores values of a single type
-              - A value can be accessed by 1 to N keys, where N is the number of
-                key 'columns' (at most one key per key column)
-              - The number and types of the key columns are limited and known at
-                compile time
-              - Keys are unique within a key column, and each key points to
-                exactly one stored value
-              - Removal of a value by key implies removal of all keys which
-                point to that value
-            This is accomplished by linking key columns to an intermediate key 
-            (key -> intermediate key -> value), and by storing keys which point 
-            to the same value together.
+              - The container stores values of a single type.
+              - To access a stored value, the user specifies a 'path' and a
+                valid key for that path.
+              - Each stored value is retrievable by at least one path/key pair.
+              - Each path/key pair 'points to' exactly one stored value.
+              - A stored value may be retrievable by up to N path/key pairs,
+                where N is the number of paths.
+              - If a stored value is retrievable by multiple path/key pairs,
+                the paths must be different (i.e. max one key per path per 
+                value).
+              - The number and types of the paths are limited and known at
+                compile time.
+              - Within a path, keys are unique.
+              - Removal of a value implies removal of all keys which point to 
+                that value.
+            This is achieved by linking keys to an intermediate key, and also
+            linking keys together which point to the same value, similar to:
+              key  <----\
+              key  <-----+----->  intermediate key  ----->  value
+              key  <----/
+            The container is analogous to a relational database table with N 
+            nullable columns (representing the paths) plus a column for the 
+            stored value.
     @tparam Value_T
             Type of the stored values. Should be copy constructible.
-    @tparam Key_Ts
-            Types of the key columns. Each type should be copy constructible.
+    @tparam Path_Ts
+            Each path's type. Should be copy constructible.
     */
-  template<typename Value_T, typename ...Key_Ts>
+  template<typename Value_T, typename ...Path_Ts>
   class polykey_map
   {
   protected:
-    /**
-      @brief  Returns a key column's type
-      @tparam I
-              Key column index
-      */
-    template<unsigned int I>
-    using Key_T = typename std::tuple_element<I, std::tuple<Key_Ts...>>::type;
+    //  ========
+    //  Typedefs
+    //  ========
 
     /**
-      @brief  The total number of key columns
+      @brief  Returns a path's type
+      @tparam P
+              Path index
       */
-    static const unsigned int N_Keys = sizeof...(Key_Ts);
+    template<unsigned int P>
+    using Path_T = typename std::tuple_element<P, std::tuple<Path_Ts...>>::type;
+
+    /**
+      @brief  The number of different paths
+      */
+    static const unsigned int N_Paths = sizeof...(Path_Ts);
 
     /**
       @brief  Type used for the intermediate key
       */
-    typedef unsigned long intermediate_key_t;
+    using intermediate_key_t = unsigned long;
 
     /**
       @brief  A collection of linked keys which point to the same value
@@ -78,38 +93,37 @@ namespace xu
     struct keyset_t
     {
       /**
-        @brief  Keys, held in heap memory
-                If non-null, key is valid and is associated with the
-                intermediate key and value to which it points.
-                If null, key is not linked
+        @brief  Linked keys
+                If non-null, key is valid and points to a stored value
+                (indirectly, through the intermediate key)
+                If null, key is not valid
         */
-      std::tuple<Key_Ts*...> tup;
+      std::tuple<Path_Ts*...> keys;
+
+      /**
+        @brief  The linked intermediate key
+        */
       intermediate_key_t ink;
 
       /**
-        @brief  First helper function to initialize tup to all null
+        @brief  Helper function to initialize keys to all null
         */
-      template<unsigned int I = 0>
-      inline typename std::enable_if<I == N_Keys, void>::type _nullify()
+      template<unsigned int P = 0>
+      inline typename std::enable_if<P != N_Paths, void>::type _nullify()
+      {
+        static_assert(P < N_Paths);
+
+        std::get<P>(keys) = nullptr;
+
+        _nullify<P + 1>();
+      }
+
+      template<unsigned int P = 0>
+      inline typename std::enable_if<P == N_Paths, void>::type _nullify()
       {}
 
       /**
-        @brief  Second helper function to initialize tup to all null
-        */
-      template<unsigned int I = 0>
-      inline typename std::enable_if<I != N_Keys, void>::type _nullify()
-      {
-        std::get<I>(tup) = nullptr;
-
-        _nullify<I + 1>();
-      }
-
-      /**
-        @brief  Default keyset constructor
-        @note   Keys in tup are initialized to nullptr using helper functions.
-                We use helper functions instead of std::apply to be consistent
-                with polykey_map::remove() below, which requires helper
-                functions
+        @brief  Default constructor
         */
       keyset_t(intermediate_key_t ink_)
         : ink(ink_)
@@ -119,7 +133,7 @@ namespace xu
     };
 
     /**
-      @brief  Error type when inserting/linking keys
+      @brief  Error type thrown when inserting or linking keys
       */
     class key_conflict_error : public std::runtime_error
     {
@@ -129,70 +143,113 @@ namespace xu
       {}
     };
 
+    /**
+      @brief  Item type stored in ink_to_val
+      */
+    using ink_value_pair = std::pair<intermediate_key_t, Value_T>;
+
+    /**
+      @brief  Item type stored in ink_to_keys
+      */
+    using ink_keyset_pair = std::pair<intermediate_key_t, keyset_t>;
+
+    /**
+      @brief  Item type stored in key_to_ink
+      */
+    template<unsigned int P>
+    using key_ink_pair = std::pair<Path_T<P>, intermediate_key_t>;
+
+
   public:
+    //  ======================
+    //  Constructor/Destructor
+    //  ======================
+
+    /**
+      @brief  Default constructor
+      */
+    polykey_map()
+      : ink_cnt(0)
+    {}
+
+    /**
+      @brief  Free memory on destruction
+      */
+    ~polykey_map()
+    {
+      for (auto& it : ink_to_keys)
+      {
+        _remove(it.second);
+      }
+    }
+
+    //  ==================
+    //  Container Behavior
+    //  ==================
 
     /**
       @brief  Insert a new value
-      @tparam I
-              Key column index (which column key belongs to)
+      @tparam P
+              Path index
       @param  key
-              Key which will point to this value
+              Key for path
       @param  value
               Value to insert
       @throw  xu::polykey_map::key_conflict_error
-              If key already exists
+              If key already exists for path
       */
-    template<unsigned int I>
-    void insert(Key_T<I> key, Value_T value)
+    template<unsigned int P>
+    void insert(Path_T<P> key, Value_T value)
     {
-      static_assert(I < N_Keys);
+      static_assert(P < N_Paths);
 
-      auto it = std::get<I>(inks).find(key);
+      auto it = std::get<P>(key_to_ink).find(key);
 
-      if (it != std::get<I>(inks).end())
+      if (it != std::get<P>(key_to_ink).end())
       {
-        throw key_conflict_error("polykey_map::insert() : key already exists");
+        throw key_conflict_error("polykey_map::insert() : key already exists for path");
       }
 
       /* insert the value with intermediate key */
-      vals.insert(std::pair<intermediate_key_t, Value_T>(ink_ctr, value));
+      ink_to_val.insert(ink_value_pair(ink_cnt, value));
 
       /* link key and intermediate key */
-      keyset_t ks(ink_ctr);
-      std::get<I>(ks.tup) = new Key_T<I>(key);
+      keyset_t ks(ink_cnt);
+      std::get<P>(ks.keys) = new Path_T<P>(key);
       
-      keysets.insert(std::pair<intermediate_key_t, keyset_t>(ink_ctr, ks));
-      std::get<I>(inks).insert(std::pair<Key_T<I>, intermediate_key_t>(key, ink_ctr));
+      ink_to_keys.insert(ink_keyset_pair(ink_cnt, ks));
 
-      ink_ctr++;
+      std::get<P>(key_to_ink).insert(key_ink_pair<P>(key, ink_cnt));
+
+      ink_cnt++;
     }
 
     /**
       @brief  Retrieve a value (by reference)
-      @tparam I
-              Key column index (which column key belongs to)
+      @tparam P
+              Path index
       @param  key
               Key to get value for
       @throw  std::out_of_range
               If key does not exist
       */
-    template<unsigned int I>
-    Value_T& get(Key_T<I> key)
+    template<unsigned int P>
+    Value_T& get(Path_T<P> key)
     {
-      static_assert(I < N_Keys);
+      static_assert(P < N_Paths);
 
       /* get intermediate key */
-      auto it = std::get<I>(inks).find(key);
+      auto it = std::get<P>(key_to_ink).find(key);
 
-      if (it == std::get<I>(inks).end())
+      if (it == std::get<P>(key_to_ink).end())
       {
-        throw std::out_of_range("polykey_map::get() : key does not exist");
+        throw std::out_of_range("polykey_map::get() : key does not exist for path");
       }
 
       intermediate_key_t ink = it->second;
 
       /* return value for intermediate key */
-      return vals.at(ink);
+      return ink_to_val.at(ink);
     }
 
     /**
@@ -201,10 +258,10 @@ namespace xu
               (points to an object), the other key is set to point to the same
               value. If both keys are valid, or if neither key is valid, then an
               error is thrown
-      @tparam I1
-              Key column index 1
-      @tparam I2
-              Key column index 2
+      @tparam P1
+              Path index for first key
+      @tparam P2
+              Path index for second key
       @param  key1
               First key
       @param  key2
@@ -214,58 +271,60 @@ namespace xu
       @throw  std::out_of_range
               If neither key exists
       */
-    template<unsigned int I1, unsigned int I2>
-    void link(Key_T<I1> key1, Key_T<I2> key2)
+    template<unsigned int P1, unsigned int P2>
+    void link(Path_T<P1> key1, Path_T<P2> key2)
     {
-      static_assert(I1 < N_Keys);
-      static_assert(I2 < N_Keys);
-      static_assert(I1 != I2);
+      static_assert(P1 < N_Paths);
+      static_assert(P2 < N_Paths);
+      static_assert(P1 != P2);
 
       /* get intermediate keys */
-      auto it1 = std::get<I1>(inks).find(key1);
-      auto it2 = std::get<I2>(inks).find(key2);
+      auto it1 = std::get<P1>(key_to_ink).find(key1);
+      auto it2 = std::get<P2>(key_to_ink).find(key2);
 
-      if (it1 == std::get<I1>(inks).end() and it2 == std::get<I2>(inks).end())
+      if (it1 == std::get<P1>(key_to_ink).end() and it2 == std::get<P2>(key_to_ink).end())
       {
         throw std::out_of_range("polykey_map::link() : keys do not exist");
       }
 
-      if (it1 != std::get<I1>(inks).end() and it2 != std::get<I2>(inks).end())
+      if (it1 != std::get<P1>(key_to_ink).end() and it2 != std::get<P2>(key_to_ink).end())
       {
         throw key_conflict_error("polykey_map::link() : both keys already exist");
       }
 
       /* link key1 with existing key2 */
-      if (it1 == std::get<I1>(inks).end() and it2 != std::get<I2>(inks).end())
+      if (it1 == std::get<P1>(key_to_ink).end() and it2 != std::get<P2>(key_to_ink).end())
       {
-        keyset_t& ks =  keysets.at(it2->second);
-        std::get<I1>(ks.tup) = new Key_T<I1>(key1);
-        std::get<I1>(inks).insert(std::pair<Key_T<I1>, intermediate_key_t>(key1, ks.ink));
+        keyset_t& ks =  ink_to_keys.at(it2->second);
+        std::get<P1>(ks.keys) = new Path_T<P1>(key1);
+
+        std::get<P1>(key_to_ink).insert(key_ink_pair<P1>(key1, ks.ink));
       }
       /* link key2 with existing key1 */
-      else if (it1 != std::get<I1>(inks).end() and it2 == std::get<I2>(inks).end())
+      else if (it1 != std::get<P1>(key_to_ink).end() and it2 == std::get<P2>(key_to_ink).end())
       {
-        keyset_t& ks =  keysets.at(it1->second);
-        std::get<I2>(ks.tup) = new Key_T<I2>(key2);
-        std::get<I2>(inks).insert(std::pair<Key_T<I2>, intermediate_key_t>(key2, ks.ink));
+        keyset_t& ks =  ink_to_keys.at(it1->second);
+        std::get<P2>(ks.keys) = new Path_T<P2>(key2);
+
+        std::get<P2>(key_to_ink).insert(key_ink_pair<P2>(key2, ks.ink));
       }
     }
 
     /**
       @brief  Check whether a value exists for the given key
-      @tparam I
-              Key column index (which column key belongs to)
+      @tparam P
+              Path index
       @param  key
-              Key to check for
+              Key to check
       */
-    template<unsigned int I>
-    bool contains(Key_T<I> key)
+    template<unsigned int P>
+    bool contains(Path_T<P> key)
     {
-      static_assert(I < N_Keys);
+      static_assert(P < N_Paths);
 
-      auto it = std::get<I>(inks).find(key);
+      auto it = std::get<P>(key_to_ink).find(key);
 
-      if (it == std::get<I>(inks).end())
+      if (it == std::get<P>(key_to_ink).end())
       {
         return false;
       }
@@ -274,109 +333,98 @@ namespace xu
         return true;
       }
     }
-
     
   protected:
     /**
-      @brief  First helper function for iterating over keyset_t.tup for removal
-      */
-    template<unsigned int I = 0>
-    inline typename std::enable_if<I == N_Keys, void>::type _remove(keyset_t& ks)
-    {}
-
-    /**
-      @brief  Second helper function to iterating over keyset_t.tup for removal
-      @note   std::apply was not used because we have multiple tuples (ks.tup 
-              and inks) which we want to iterate through at the same time
+      @brief  Helper function to iterate over keyset_t.keys
+              Checks if any of keyset_t.keys str non-null and unlinks if so
+      @note   std::apply was not used because we have multiple tuples which we
+              want to iterate through at the same time
       @note   see stackoverflow question #1198260
       */
-    template<unsigned int I = 0>
-    inline typename std::enable_if<I != N_Keys, void>::type _remove(keyset_t& ks)
+    template<unsigned int P = 0>
+    inline typename std::enable_if<P != N_Paths, void>::type _remove(keyset_t& ks)
     {
-      if (std::get<I>(ks.tup) != nullptr)
+      /*
+        Here we use a static assert, instead of P < N_Paths in return type,
+        simply because the '<' causes sublime to think it's another template arg
+        and messes up the syntax coloring
+        */
+      static_assert(P < N_Paths);
+
+      if (std::get<P>(ks.keys) != nullptr)
       {
-        std::get<I>(inks).erase(*std::get<I>(ks.tup));
-        delete std::get<I>(ks.tup);
-        std::get<I>(ks.tup) = nullptr;
+        std::get<P>(key_to_ink).erase(*std::get<P>(ks.keys));
+        delete std::get<P>(ks.keys);
+        std::get<P>(ks.keys) = nullptr;
       }
 
-      _remove<I + 1>(ks);
+      _remove<P + 1>(ks);
     }
+
+    template<unsigned int P = 0>
+    inline typename std::enable_if<P == N_Paths, void>::type _remove(keyset_t& ks)
+    {}
 
   public:
     /**
       @brief  Remove a value and all keys which point to it
-      @note   This function has two helper functions which are used to iterate
-              over a tuple (keyset_t.tup)
-      @tparam I
+      @tparam P
               Key column index (which column key belongs to)
       @param  key
               Key to remove value for
       @throw  std::out_of_range
               If key does not exist
       */
-    template<unsigned int I>
-    void remove(Key_T<I> key)
+    template<unsigned int P>
+    void remove(Path_T<P> key)
     {
-      static_assert(I < N_Keys);
+      static_assert(P < N_Paths);
 
       /* first get the intermediate key */
-      auto it = std::get<I>(inks).find(key);
+      auto it = std::get<P>(key_to_ink).find(key);
 
-      if (it == std::get<I>(inks).end())
+      if (it == std::get<P>(key_to_ink).end())
       {
-        throw std::out_of_range("polykey_map::get() : key does not exist");
+        throw std::out_of_range("polykey_map::get() : key does not exist for path");
       }
 
       intermediate_key_t ink = it->second;
 
       /* then remove linked keys */
-      _remove(keysets.at(ink));
+      _remove(ink_to_keys.at(ink));
 
-      keysets.erase(ink);
+      ink_to_keys.erase(ink);
 
       /* finally, erase the value itself */
-      vals.erase(ink);
-    }
-
-    /**
-      @brief  Default constructor
-      */
-    polykey_map()
-      : ink_ctr(0)
-    {}
-
-    /**
-      @brief  Deallocate heap memory on destruction
-      */
-    ~polykey_map()
-    {
-      for (auto& it : keysets)
-      {
-        _remove(it.second);
-      }
+      ink_to_val.erase(ink);
     }
 
   protected:
-    /**
-      @brief  Container for actual stored values
-      */
-    std::unordered_map<intermediate_key_t, Value_T> vals;
+    //  ================
+    //  Member Variables
+    //  ================
 
     /**
-      @brief  Keep keys together which point to the same value
+      @brief  Intermediate key used for linking and lookup
+              Increments each time a new value is inserted
       */
-    std::unordered_map<intermediate_key_t, keyset_t> keysets;
+    intermediate_key_t ink_cnt;
 
     /**
-      @brief Intermediate key which increments for each inserted value
+      @brief  Container which actually holds stored values
       */
-    intermediate_key_t ink_ctr;
+    std::unordered_map<intermediate_key_t, Value_T> ink_to_val;
 
     /**
-      @brief Link key columns to intermediate key
+      @brief  Keysets which contain info on all keys for a value
       */
-    std::tuple<std::unordered_map<Key_Ts, intermediate_key_t>...> inks;
+    std::unordered_map<intermediate_key_t, keyset_t> ink_to_keys;
+
+    /**
+      @brief  Link keys to intermediate key
+      */
+    std::tuple<std::unordered_map<Path_Ts, intermediate_key_t>...> key_to_ink;
 
   };
 }
