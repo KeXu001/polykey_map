@@ -57,21 +57,21 @@ int main()
 
   otk.insert<InternalOrderId>(14, Order{"MSFT", -100});
 
-  std::cout << otk.get<InternalOrderId>(13) << std::endl;
+  std::cout << otk.at<InternalOrderId>(13) << std::endl;
 
 
   otk.link<InternalOrderId, ExternalOrderId>(13, "1337");
 
-  otk.get<ExternalOrderId>("1337").svol = 50;
+  otk.at<ExternalOrderId>("1337").svol = 50;
 
-  std::cout << otk.get<InternalOrderId>(13) << std::endl;
+  std::cout << otk.at<InternalOrderId>(13) << std::endl;
 
-  
-  otk.remove<ExternalOrderId>("1337");
+
+  otk.erase<ExternalOrderId>("1337");
 
   try
   {
-    std::cout << otk.get<InternalOrderId>(13) << std::endl;
+    std::cout << otk.at<InternalOrderId>(13) << std::endl;
   }
   catch (std::out_of_range& err)
   {

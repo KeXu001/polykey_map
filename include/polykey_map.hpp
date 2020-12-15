@@ -280,7 +280,7 @@ namespace xu
     {
       for (auto& it : ink_to_keys)
       {
-        _remove(it.second);
+        _erase(it.second);
       }
     }
 
@@ -335,7 +335,7 @@ namespace xu
               If key does not exist
       */
     template<unsigned int P>
-    Value_T& get(Path_T<P> key)
+    Value_T& at(Path_T<P> key)
     {
       static_assert(P < N_Paths);
 
@@ -344,7 +344,7 @@ namespace xu
 
       if (it == std::get<P>(key_to_ink).end())
       {
-        throw std::out_of_range("polykey_map::get() : key does not exist for path");
+        throw std::out_of_range("polykey_map::at() : key does not exist for path");
       }
 
       intermediate_key_t ink = it->second;
@@ -444,7 +444,7 @@ namespace xu
       @note   see stackoverflow question #1198260
       */
     template<unsigned int P = 0>
-    inline typename std::enable_if<P != N_Paths, void>::type _remove(keyset_t& ks)
+    inline typename std::enable_if<P != N_Paths, void>::type _erase(keyset_t& ks)
     {
       /*
         Here we use a static assert, instead of P < N_Paths in return type,
@@ -460,11 +460,11 @@ namespace xu
         std::get<P>(ks.keys) = nullptr;
       }
 
-      _remove<P + 1>(ks);
+      _erase<P + 1>(ks);
     }
 
     template<unsigned int P = 0>
-    inline typename std::enable_if<P == N_Paths, void>::type _remove(keyset_t& ks)
+    inline typename std::enable_if<P == N_Paths, void>::type _erase(keyset_t& ks)
     {}
 
   public:
@@ -478,7 +478,7 @@ namespace xu
               If key does not exist
       */
     template<unsigned int P>
-    void remove(Path_T<P> key)
+    void erase(Path_T<P> key)
     {
       static_assert(P < N_Paths);
 
@@ -487,13 +487,13 @@ namespace xu
 
       if (it == std::get<P>(key_to_ink).end())
       {
-        throw std::out_of_range("polykey_map::get() : key does not exist for path");
+        throw std::out_of_range("polykey_map::erase() : key does not exist for path");
       }
 
       intermediate_key_t ink = it->second;
 
       /* then remove linked keys */
-      _remove(ink_to_keys.at(ink));
+      _erase(ink_to_keys.at(ink));
 
       ink_to_keys.erase(ink);
 
