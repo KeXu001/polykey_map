@@ -49,9 +49,9 @@ pkmap.link<Key1, Key2>(16, 'D');
 
 ...
 
-pkmap.get<Key2>('D') = "there!"
+pkmap.at<Key2>('D') = "there!"
 
-pkmap.remove<Key1>(16);
+pkmap.erase<Key1>(16);
 
 if (pkmap.contains<Key1>(17))
 {
