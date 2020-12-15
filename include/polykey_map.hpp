@@ -299,6 +299,25 @@ namespace xu
     //  ==================
 
     /**
+      @brief  Returns total number of stored values
+      */
+    size_t size()
+    {
+      return ink_to_val.size();
+    }
+
+    /**
+      @brief  Returns number of valid keys for a path
+      @tparam P
+              Path index
+      */
+    template<unsigned int P>
+    size_t numKeys()
+    {
+      return std::get<P>(key_to_ink).size();
+    }
+
+    /**
       @brief  Insert a new value
       @tparam P
               Path index
