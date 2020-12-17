@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include <memory>
 #include <tuple>
 #include <unordered_map>
 
@@ -95,82 +96,45 @@ namespace xu
     using intermediate_key_t = unsigned long long;
 
     /**
+      @brief  Initial value for intermediate key
+      @note   Doesn't really matter but should be initialized to something
+      */
+    static const intermediate_key_t ink_cnt_init_val = 0;
+
+    /**
       @brief  A collection of linked keys which point to the same value
       */
     class keyset_t
     {
     protected:
+      //  ----------------
+      //  Member Variables
+      //  ----------------
+
       /**
         @brief  Linked keys
-                If non-null, key is valid and points to a stored value
-                (indirectly, through the intermediate key)
-                If null, key is not valid
+                If non-null, key is valid
         */
-      std::tuple<Path_Ts*...> keys;
+      std::tuple<std::unique_ptr<Path_Ts>...> keys;
 
       /**
         @brief  The linked intermediate key
         */
-      intermediate_key_t ink;
-
-      /**
-        @brief  Helper function to initialize keys to all null
-        */
-      template<unsigned int P = 0>
-      inline typename std::enable_if<P != N_Paths, void>::type _initialize()
-      {
-        static_assert(P < N_Paths);
-
-        std::get<P>(keys) = nullptr;
-
-        _initialize<P + 1>();
-      }
-
-      template<unsigned int P = 0>
-      inline typename std::enable_if<P == N_Paths, void>::type _initialize()
-      {}
+      const intermediate_key_t ink;
 
     public:
-      /**
-        @brief  Default constructor
-        */
-      keyset_t(intermediate_key_t ink_)
-        : ink(ink_)
-      {
-        _initialize();
-      }
+      //  -------
+      //  Get/Set
+      //  -------
 
       /**
         @brief  Set a key
+        @note   Overwrites existing
         */
       template<unsigned int P>
       void set(Path_T<P> key)
       {
-        if (std::get<P>(keys) != nullptr)
-        {
-          delete std::get<P>(keys);
-        }
-        std::get<P>(keys) = new Path_T<P>(key);
-      }
-
-      /**
-        @brief  Checks if a key is set
-        */
-      template<unsigned int P>
-      bool isSet()
-      {
-        return std::get<P>(keys) != nullptr;
-      }
-
-      /**
-        @brief  Returns copy of key
-        @note   Must only be used after checking isSet() is true. Otherwise,
-                behavior is not defined
-        */
-      template<unsigned int P>
-      Path_T<P> get()
-      {
-        return *std::get<P>(keys);
+        std::get<P>(keys).reset(new Path_T<P>(key));
       }
 
       /**
@@ -179,49 +143,45 @@ namespace xu
       template<unsigned int P>
       void clear()
       {
-        if (std::get<P>(keys) != nullptr)
-        {
-          delete std::get<P>(keys);
-          std::get<P>(keys) = nullptr;
-        }
+        std::get<P>(keys).reset();
+      }
+
+      /**
+        @brief  Checks if a key is set
+        */
+      template<unsigned int P>
+      bool isSet() const
+      {
+        return (bool)std::get<P>(keys);
+      }
+
+      /**
+        @brief  Returns copy of key
+        @note   Must only be used after checking isSet() is true. Otherwise,
+                behavior is not defined
+        */
+      template<unsigned int P>
+      Path_T<P> get() const
+      {
+        return *std::get<P>(keys);
       }
 
       /**
         @brief  Returns copy of intermediate key
         */
-      intermediate_key_t getInk()
+      intermediate_key_t getInk() const
       {
         return ink;
       }
 
+    public:
       /**
-        @brief  Helper function to initialize keys to all null
+        @brief  Construct keyset with intermediate key
+                Intermediate key does not change for the life of the keyset
         */
-      template<unsigned int P = 0>
-      inline typename std::enable_if<P != N_Paths, void>::type _nullify()
-      {
-        static_assert(P < N_Paths);
-
-        if (std::get<P>(keys) != nullptr)
-        {
-          delete std::get<P>(keys);
-        }
-        std::get<P>(keys) = nullptr;
-
-        _nullify<P + 1>();
-      }
-
-      template<unsigned int P = 0>
-      inline typename std::enable_if<P == N_Paths, void>::type _nullify()
+      keyset_t(intermediate_key_t ink_)
+        : ink(ink_)
       {}
-
-      /**
-        @brief  Destructor
-        */
-      ~keyset_t()
-      {
-        _nullify();
-      }
 
     protected:
       /**
@@ -232,15 +192,13 @@ namespace xu
       {
         static_assert(P < N_Paths);
 
-        if (std::get<P>(keys) != nullptr)
-        {
-          delete std::get<P>(keys);
-          std::get<P>(keys) = nullptr;
-        }
+        /* clear current key of this */
+        clear<P>();
 
-        if (std::get<P>(other.keys) != nullptr)
+        /* create copy of other's key */
+        if (other.isSet<P>())
         {
-          std::get<P>(keys) = new Path_T<P>(*std::get<P>(other.keys));
+          set<P>(other.get<P>());
         }
 
         _copy<P + 1>(other);
@@ -262,13 +220,21 @@ namespace xu
 
       /**
         @brief  Copy assignment
+        @note   Deleted because ink is const
         */
-      keyset_t& operator=(const keyset_t& other)
-      {
-        ink = other.ink;
+      keyset_t& operator=(const keyset_t& other) = delete;
 
-        _copy(other);
-      }
+      /**
+        @brief  Move constructor
+        @note   Deleted because ink is const
+        */
+      keyset_t(keyset_t&& other) = delete;
+
+      /**
+        @brief  Move assignment
+        @note   Deleted because ink is const
+        */
+      keyset_t& operator=(keyset_t&& other) = delete;
     };
 
     /**
@@ -419,7 +385,7 @@ namespace xu
       @brief  Default constructor
       */
     polykey_map()
-      : ink_cnt(0)
+      : ink_cnt(ink_cnt_init_val)
     {}
 
     /**
@@ -437,25 +403,42 @@ namespace xu
     //  Copy & Move
     //  ===========
 
-    // polykey_map(const polykey_map& other)
-    // {
+    polykey_map(const polykey_map& other)
+      : ink_cnt(other.ink_cnt),
+        ink_to_val(other.ink_to_val),
+        ink_to_keys(other.ink_to_keys),
+        key_to_ink(other.key_to_ink)
+    {
 
-    // }
+    }
 
-    // polykey_map& operator=(const polykey_map& other)
-    // {
+    polykey_map& operator=(const polykey_map& other)
+    {
+      ink_cnt = other.ink_cnt;
 
-    // }
+      ink_to_val = other.ink_to_val;
+      ink_to_keys = other.ink_to_keys;
+      key_to_ink = other.key_to_ink;
+    }
 
-    // polykey_map(polykey_map&& other)
-    // {
+    polykey_map(polykey_map&& other)
+      : ink_cnt(other.ink_cnt),
+        ink_to_val(std::move(other.ink_to_val)),
+        ink_to_keys(std::move(other.ink_to_keys)),
+        key_to_ink(std::move(other.key_to_ink))
+    {
+      other.ink_cnt = ink_cnt_init_val;
+    }
 
-    // }
+    polykey_map& operator=(const polykey_map&& other)
+    {
+      ink_cnt = other.ink_cnt;
+      other.ink_cnt = ink_cnt_init_val;
 
-    // polykey_map& operator=(const polykey_map&& other)
-    // {
-
-    // }
+      ink_to_val = std::move(other.ink_to_val);
+      ink_to_keys = std::move(other.ink_to_keys);
+      key_to_ink = std::move(other.key_to_ink);
+    }
 
     //  ==================
     //  Container Behavior

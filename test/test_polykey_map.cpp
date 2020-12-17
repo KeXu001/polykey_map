@@ -95,5 +95,9 @@ int main()
 
   OrderTracker otk_copy = otk;
 
-  std::cout << otk_copy.size() << std::endl;
+  OrderTracker otk_copy2 = std::move(otk);
+
+  std::cout << "otk.size()=" << otk.size() << std::endl;
+  std::cout << "otk_copy.size()=" << otk_copy.size() << std::endl;
+  std::cout << "otk_copy2.size()=" << otk_copy2.size() << std::endl;
 }
