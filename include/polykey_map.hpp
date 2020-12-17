@@ -419,6 +419,8 @@ namespace xu
       ink_to_val = other.ink_to_val;
       ink_to_keys = other.ink_to_keys;
       key_to_ink = other.key_to_ink;
+
+      return *this;
     }
 
     polykey_map(polykey_map&& other)
@@ -438,6 +440,8 @@ namespace xu
       ink_to_val = std::move(other.ink_to_val);
       ink_to_keys = std::move(other.ink_to_keys);
       key_to_ink = std::move(other.key_to_ink);
+
+      return *this;
     }
 
     //  ==================
