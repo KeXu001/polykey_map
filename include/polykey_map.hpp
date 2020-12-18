@@ -475,7 +475,7 @@ namespace xu
     /**
       @brief  Returns total number of stored values
       */
-    size_t size()
+    size_t size() const
     {
       return ink_to_val.size();
     }
@@ -486,7 +486,7 @@ namespace xu
               Path index
       */
     template<unsigned int P>
-    size_t size()
+    size_t size() const
     {
       return std::get<P>(key_to_ink).size();
     }

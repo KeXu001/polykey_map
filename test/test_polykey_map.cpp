@@ -49,6 +49,11 @@ std::ostream& operator<<(std::ostream& stream, const Order& order)
 /* the first argument is the type of the stored values */
 using OrderTracker = xu::polykey_map<Order, InternalOrderId_t, ExternalOrderId_t>;
 
+void outputSize(const OrderTracker& otk)
+{
+  std::cout << otk.size() << std::endl;
+}
+
 int main()
 {
   OrderTracker otk;
@@ -107,4 +112,6 @@ int main()
   std::cout << "otk.size()=" << otk.size() << std::endl;
   std::cout << "otk_copy.size()=" << otk_copy.size() << std::endl;
   std::cout << "otk_copy2.size()=" << otk_copy2.size() << std::endl;
+
+  outputSize(otk);
 }
