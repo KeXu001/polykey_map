@@ -339,7 +339,7 @@ namespace xu
       /**
         @brief  Equality
         */
-      bool operator==(const iterator_& other)
+      bool operator==(const iterator_& other) const
       {
         return underlying == other.underlying;
       }
@@ -347,7 +347,7 @@ namespace xu
       /**
         @brief  Inequality
         */
-      bool operator!=(const iterator_& other)
+      bool operator!=(const iterator_& other) const
       {
         return underlying != other.underlying;
       }
@@ -355,7 +355,7 @@ namespace xu
       /**
         @brief  Dereference
         */
-      Ret_T& operator*()
+      Ret_T& operator*() const
       {
         return underlying->second;
       }
@@ -363,7 +363,7 @@ namespace xu
       /**
         @brief  Arrow operator
         */
-      Ret_T* operator->()
+      Ret_T* operator->() const
       {
         return &underlying->second;
       }
