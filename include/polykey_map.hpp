@@ -273,8 +273,11 @@ namespace xu
       @brief  Iterator definition
               Used to iterate through stored values. Does not contain any info
               about keys.
+      @tparam Ret_T
+              Type of dereferenced value
       */
-    class iterator
+    template<typename Ret_T>
+    class iterator_
     {
       friend polykey_map;
     protected:
@@ -294,21 +297,21 @@ namespace xu
       /**
         @brief  Construct iterator with underlying
         */
-      iterator(underlying_t underlying_)
+      iterator_(underlying_t underlying_)
         : underlying(underlying_)
       {}
 
       /**
         @brief  Copy constructor
         */
-      iterator(const iterator& other)
+      iterator_(const iterator_& other)
         :underlying(other.underlying)
       {}
 
       /**
         @brief  Assignment
         */
-      iterator& operator=(const iterator& other)
+      iterator_& operator=(const iterator_& other)
       {
         underlying = other.underlying;
         return *this;
@@ -317,7 +320,7 @@ namespace xu
       /**
         @brief  Prefix increment
         */
-      iterator& operator++()
+      iterator_& operator++()
       {
         underlying++;
         return *this;
@@ -326,9 +329,9 @@ namespace xu
       /**
         @brief  Postfix increment
         */
-      iterator operator++(int)
+      iterator_ operator++(int)
       {
-        iterator res = *this;
+        iterator_ res = *this;
         operator++();
         return res;
       }
@@ -336,7 +339,7 @@ namespace xu
       /**
         @brief  Equality
         */
-      bool operator==(const iterator& other)
+      bool operator==(const iterator_& other)
       {
         return underlying == other.underlying;
       }
@@ -344,7 +347,7 @@ namespace xu
       /**
         @brief  Inequality
         */
-      bool operator!=(const iterator& other)
+      bool operator!=(const iterator_& other)
       {
         return underlying != other.underlying;
       }
@@ -352,7 +355,7 @@ namespace xu
       /**
         @brief  Dereference
         */
-      Value_T& operator*()
+      Ret_T& operator*()
       {
         return underlying->second;
       }
@@ -360,11 +363,22 @@ namespace xu
       /**
         @brief  Arrow operator
         */
-      Value_T* operator->()
+      Ret_T* operator->()
       {
         return &underlying->second;
       }
+
+      /**
+        @brief  Conversion from iterator to const_iterator
+        */
+      operator iterator_<const Ret_T>() const
+      {
+        return iterator_<const Ret_T>(underlying);
+      }
     };
+
+    using iterator = iterator_<Value_T>;
+    using const_iterator = iterator_<const Value_T>;
 
     iterator begin()
     {
@@ -374,6 +388,16 @@ namespace xu
     iterator end()
     {
       return iterator(ink_to_val.end());
+    }
+
+    const_iterator begin() const
+    {
+      return const_iterator(ink_to_val.begin());
+    }
+
+    const_iterator end() const
+    {
+      return const_iterator(ink_to_val.end());
     }
 
   public:

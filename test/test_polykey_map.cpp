@@ -75,13 +75,20 @@ int main()
   /* erase */
   otk.erase<ExternalOrderId>("1337");
 
+  OrderTracker::const_iterator cit = otk.begin();
+
   /* loop using iterator */
-  for (auto it = otk.begin(); it != otk.end(); it++)
+  for (OrderTracker::iterator it = otk.begin(); it != otk.end(); it++)
   {
     if (it->ticker == "TSLA")
     {
       it = otk.erase(it);
     }
+
+    cit = it;
+
+    std::cout << "not erased=" << *cit << std::endl;
+    std::cout << "not erased, ticker=" << cit->ticker << std::endl;
   }
 
   /* loop using colon syntax */
