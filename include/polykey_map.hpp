@@ -273,31 +273,28 @@ namespace xu
       @brief  Iterator definition
               Used to iterate through stored values. Does not contain any info
               about keys.
+      @tparam Und_T
+              Underlying iterator type (of unordered_map container)
       @tparam Ret_T
               Type of dereferenced value
       */
-    template<typename Ret_T>
+    template<typename Und_T, typename Ret_T>
     class iterator_
     {
       friend polykey_map;
     protected:
       /**
-        @brief  Type of the underlying iterator
-        */
-      using underlying_t = typename std::unordered_map<intermediate_key_t, Value_T>::iterator;
-
-      /**
         @brief  The underlying iterator for value access
                 Our iterator delegates behavior to this underlying iterator. The
                 only difference is that we return only the value (not a pair)
         */
-      underlying_t underlying;
+      Und_T underlying;
 
     public:
       /**
         @brief  Construct iterator with underlying
         */
-      iterator_(underlying_t underlying_)
+      iterator_(Und_T underlying_)
         : underlying(underlying_)
       {}
 
@@ -371,14 +368,15 @@ namespace xu
       /**
         @brief  Conversion from iterator to const_iterator
         */
-      operator iterator_<const Ret_T>() const
+      template<typename Und_T_new>
+      operator iterator_<Und_T_new, const Ret_T>() const
       {
-        return iterator_<const Ret_T>(underlying);
+        return iterator_<Und_T_new, const Ret_T>(underlying);
       }
     };
 
-    using iterator = iterator_<Value_T>;
-    using const_iterator = iterator_<const Value_T>;
+    using iterator = iterator_<typename std::unordered_map<intermediate_key_t, Value_T>::iterator, Value_T>;
+    using const_iterator = iterator_<typename std::unordered_map<intermediate_key_t, Value_T>::const_iterator, const Value_T>;
 
     iterator begin()
     {
