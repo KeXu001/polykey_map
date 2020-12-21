@@ -1,5 +1,3 @@
 unlink<index>(key)
 
-const_iterator
-
 insert overwrites existing value
