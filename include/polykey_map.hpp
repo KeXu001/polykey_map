@@ -132,7 +132,7 @@ namespace xu
         @note   Overwrites existing
         */
       template<unsigned int P>
-      void set(Path_T<P> key)
+      void set(const Path_T<P>& key)
       {
         std::get<P>(keys).reset(new Path_T<P>(key));
       }
@@ -501,7 +501,7 @@ namespace xu
               If key already exists for path
       */
     template<unsigned int P>
-    void insert(Path_T<P> key, Value_T value)
+    void insert(const Path_T<P>& key, const Value_T& value)
     {
       static_assert(P < N_Paths);
 
@@ -536,7 +536,7 @@ namespace xu
     }
 
     /**
-      @brief  Retrieve a value (by reference)
+      @brief  Retrieve a value (const-qualified)
       @tparam P
               Path index
       @param  key
@@ -545,7 +545,7 @@ namespace xu
               If key does not exist
       */
     template<unsigned int P>
-    Value_T& at(Path_T<P> key)
+    const Value_T& at(const Path_T<P>& key) const
     {
       static_assert(P < N_Paths);
 
@@ -561,6 +561,22 @@ namespace xu
 
       /* return value for intermediate key */
       return ink_to_val.at(ink);
+    }
+
+    /**
+      @brief  Retrieve a value (by reference)
+      @tparam P
+              Path index
+      @param  key
+              Key to get value for
+      @throw  std::out_of_range
+              If key does not exist
+      */
+    template<unsigned int P>
+    Value_T& at(const Path_T<P>& key)
+    {
+      /* delegate at() */
+      return const_cast<Value_T&>(const_cast<const polykey_map&>(*this).at<P>(key));
     }
 
     /**
@@ -583,7 +599,7 @@ namespace xu
               If neither key exists
       */
     template<unsigned int P1, unsigned int P2>
-    void link(Path_T<P1> key1, Path_T<P2> key2)
+    void link(const Path_T<P1>& key1, const Path_T<P2>& key2)
     {
       static_assert(P1 < N_Paths);
       static_assert(P2 < N_Paths);
@@ -629,7 +645,7 @@ namespace xu
               Key to check
       */
     template<unsigned int P>
-    bool contains(Path_T<P> key)
+    bool contains(const Path_T<P>& key) const
     {
       static_assert(P < N_Paths);
 

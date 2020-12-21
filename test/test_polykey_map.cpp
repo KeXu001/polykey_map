@@ -55,6 +55,11 @@ void outputTest(const OrderTracker& otk)
   {
     std::cout << *it << std::endl;
   }
+
+  if (otk.contains<InternalOrderId>(14))
+  {
+    std::cout << "contains " << otk.at<InternalOrderId>(14) << std::endl;
+  }
 }
 
 int main()
@@ -116,5 +121,5 @@ int main()
   std::cout << "otk_copy.size()=" << otk_copy.size() << std::endl;
   std::cout << "otk_copy2.size()=" << otk_copy2.size() << std::endl;
 
-  outputTest(otk);
+  outputTest(otk_copy);
 }
