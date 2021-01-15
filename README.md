@@ -19,7 +19,7 @@
 
 Member functions take a column index as a template parameter and a key as a function parameter.
 
-- `void insert<index>(key)`
+- `void insert<index>(key, value)`
 - `Value_T& get<index>(key)`
 - `bool contains<index>(key)`
 
