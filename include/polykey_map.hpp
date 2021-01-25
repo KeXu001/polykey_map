@@ -660,6 +660,65 @@ namespace xu
         return true;
       }
     }
+
+    /**
+      @brief  Check whether a value reachable by first path is also accessible by another path
+      @tparam P1
+              Path index of known key
+      @tparam P2
+              Path index to check for linked key
+      @throw  std::out_of_range
+              If first key does not exist
+      */
+    template<unsigned int P1, unsigned int P2>
+    bool is_linked(const Path_T<P1>& key) const
+    {
+      static_assert(P1 < N_Paths);
+      static_assert(P2 < N_Paths);
+
+      auto ink_it = std::get<P1>(key_to_ink).find(key);
+
+      if (ink_it == std::get<P1>(key_to_ink).end())
+      {
+        throw std::out_of_range("polykey_map::convert_key() : key does not exist for first path");
+      }
+
+      auto keys_it = ink_to_keys.find(ink_it->second);
+
+      return keys_it->second.template isSet<P2>();
+    }
+
+    /**
+      @brief  Given a key for one path, get the linked key along another path
+      @tparam P1
+              Path index of key
+      @tparam P2
+              Path index for which to get linked key
+      @throw  std::out_of_range
+              If either key does not exist
+      */
+    template<unsigned int P1, unsigned int P2>
+    Path_T<P2> convert_key(const Path_T<P1>& key) const
+    {
+      static_assert(P1 < N_Paths);
+      static_assert(P2 < N_Paths);
+
+      auto ink_it = std::get<P1>(key_to_ink).find(key);
+
+      if (ink_it == std::get<P1>(key_to_ink).end())
+      {
+        throw std::out_of_range("polykey_map::convert_key() : key does not exist for first path");
+      }
+
+      auto keys_it = ink_to_keys.find(ink_it->second);
+
+      if (!keys_it->second.template isSet<P2>())
+      {
+        throw std::out_of_range("polykey_map::convert_key() : key does not exist for second path");
+      }
+
+      return keys_it->second.template get<P2>();
+    }
     
   protected:
     /**

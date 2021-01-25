@@ -26,6 +26,8 @@ Member functions take a column index as a template parameter and a key as a func
 The link function takes an additional index and key.
 
 - `void link<index1, index2>(key1, key2)`
+- `bool is_linked<index1, index2>(key1)`
+- `Key_T<index2> convert_key<index1, index2>(key1)`
 
 New values are inserted with a single key. To add a new key for an existing value, the `link` function is used.
 

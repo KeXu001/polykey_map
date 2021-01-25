@@ -73,10 +73,14 @@ int main()
 
   otk.insert<InternalOrderId>(15, Order{"TSLA", 20});
 
+  otk.insert<InternalOrderId>(19, Order{"FB", 50});
+
   std::cout << otk.at<InternalOrderId>(13) << std::endl;
 
   /* link */
   otk.link<InternalOrderId, ExternalOrderId>(13, "1337");
+
+  otk.link<InternalOrderId, ExternalOrderId>(19, "9865");
 
   std::cout << otk.size<InternalOrderId>() << " != " << otk.size<ExternalOrderId>() << std::endl;
 
@@ -122,4 +126,11 @@ int main()
   std::cout << "otk_copy2.size()=" << otk_copy2.size() << std::endl;
 
   outputTest(otk_copy);
+
+
+  std::cout << std::boolalpha << otk_copy.is_linked<InternalOrderId, ExternalOrderId>(19) << std::endl;
+
+  ExternalOrderId_t external_order_id = otk_copy.convert_key<InternalOrderId, ExternalOrderId>(19);
+
+  std::cout << "converted key=" << external_order_id << std::endl;
 }
