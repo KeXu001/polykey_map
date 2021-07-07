@@ -680,7 +680,7 @@ namespace xu
 
       if (ink_it == std::get<P1>(key_to_ink).end())
       {
-        throw std::out_of_range("polykey_map::convert_key() : key does not exist for first path");
+        throw std::out_of_range("polykey_map::is_linked() : key does not exist for first path");
       }
 
       auto keys_it = ink_to_keys.find(ink_it->second);
