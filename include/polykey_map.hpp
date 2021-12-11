@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include <memory>
+#include <optional>
 #include <tuple>
 #include <unordered_map>
 
@@ -62,6 +62,8 @@ namespace xu
             which we may end up with duplicate intermediate keys. We will simply
             assume that we will never reach this limit, and throw an error if
             we ever do.
+    @note   The implementation uses `std::optional`, so C++17 support is
+            required.
     @tparam Value_T
             Type of the stored values. Should be copy constructible.
     @tparam Path_Ts
@@ -115,7 +117,7 @@ namespace xu
         @brief  Linked keys
                 If non-null, key is valid
         */
-      std::tuple<std::unique_ptr<Path_Ts>...> keys;
+      std::tuple<std::optional<Path_Ts>...> keys;
 
       /**
         @brief  The linked intermediate key
@@ -134,7 +136,7 @@ namespace xu
       template<unsigned int P>
       void set(const Path_T<P>& key)
       {
-        std::get<P>(keys).reset(new Path_T<P>(key));
+        std::get<P>(keys).emplace(key);
       }
 
       /**
@@ -152,7 +154,7 @@ namespace xu
       template<unsigned int P>
       bool isSet() const
       {
-        return (bool)std::get<P>(keys);
+        return std::get<P>(keys).has_value();
       }
 
       /**

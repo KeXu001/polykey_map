@@ -26,6 +26,8 @@
 #include <iostream>
 #include "polykey_map.hpp"
 
+//g++ -I ../include -o bin/test_polykey_map test_polykey_map.cpp
+
 enum Dim
 {
   InternalOrderId,
