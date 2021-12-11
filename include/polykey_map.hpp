@@ -69,7 +69,7 @@ namespace xu
     @tparam Path_Ts
             Each path's type. Should be copy constructible.
     */
-  template<typename Value_T, typename ...Path_Ts>
+  template <typename Value_T, typename ...Path_Ts>
   class polykey_map
   {
   protected:
@@ -82,7 +82,7 @@ namespace xu
       @tparam P
               Path index
       */
-    template<unsigned int P>
+    template <unsigned int P>
     using Path_T = typename std::tuple_element<P, std::tuple<Path_Ts...>>::type;
 
     /**
@@ -133,7 +133,7 @@ namespace xu
         @brief  Set a key
         @note   Overwrites existing
         */
-      template<unsigned int P>
+      template <unsigned int P>
       void set(const Path_T<P>& key)
       {
         std::get<P>(keys).emplace(key);
@@ -142,7 +142,7 @@ namespace xu
       /**
         @brief  Clear a key
         */
-      template<unsigned int P>
+      template <unsigned int P>
       void clear()
       {
         std::get<P>(keys).reset();
@@ -151,7 +151,7 @@ namespace xu
       /**
         @brief  Checks if a key is set
         */
-      template<unsigned int P>
+      template <unsigned int P>
       bool has_value() const
       {
         return std::get<P>(keys).has_value();
@@ -162,7 +162,7 @@ namespace xu
         @note   Must only be used after checking has_value() is true. Otherwise,
                 behavior is not defined
         */
-      template<unsigned int P>
+      template <unsigned int P>
       Path_T<P> get() const
       {
         return *std::get<P>(keys);
@@ -189,7 +189,7 @@ namespace xu
       /**
         @brief  Helper function to copy keys from another keyset
         */
-      template<unsigned int P = 0>
+      template <unsigned int P = 0>
       inline typename std::enable_if<P != N_Paths, void>::type _copy(const keyset_t& other)
       {
         static_assert(P < N_Paths);
@@ -206,7 +206,7 @@ namespace xu
         _copy<P + 1>(other);
       }
 
-      template<unsigned int P = 0>
+      template <unsigned int P = 0>
       inline typename std::enable_if<P == N_Paths, void>::type _copy(const keyset_t& other)
       {}
 
@@ -252,7 +252,7 @@ namespace xu
     /**
       @brief  Item type stored in key_to_ink
       */
-    template<unsigned int P>
+    template <unsigned int P>
     using key_ink_pair = std::pair<Path_T<P>, intermediate_key_t>;
 
     /**
@@ -267,23 +267,25 @@ namespace xu
     };
 
   public:
-    //  ========
-    //  Iterator
-    //  ========
+    //  =========
+    //  Iterators
+    //  =========
 
     /**
-      @brief  Iterator definition
-              Used to iterate through stored values. Does not contain any info
-              about keys.
+      @brief  Iterator for looping through all stored values, ignoring key.
+              Dereferencing gives a single `Value_T`
       @tparam Und_T
-              Underlying iterator type (of unordered_map container)
-      @tparam Ret_T
-              Type of dereferenced value
+              Type of the underlying iterator, which can be `iterator` or
+              `const_iterator`
+      @tparam Ref_T
+              Type of the dereferenced value, which can be `Value_T` or
+              `const Value_T`
       */
-    template<typename Und_T, typename Ret_T>
-    class iterator_
+    template <typename Und_T, typename Ref_T>
+    class value_iterator_base
     {
       friend polykey_map;
+
     protected:
       /**
         @brief  The underlying iterator for value access
@@ -296,21 +298,21 @@ namespace xu
       /**
         @brief  Construct iterator with underlying
         */
-      iterator_(Und_T underlying_)
+      value_iterator_base(Und_T underlying_)
         : underlying(underlying_)
       {}
 
       /**
         @brief  Copy constructor
         */
-      iterator_(const iterator_& other)
+      value_iterator_base(const value_iterator_base& other)
         :underlying(other.underlying)
       {}
 
       /**
         @brief  Assignment
         */
-      iterator_& operator=(const iterator_& other)
+      value_iterator_base& operator=(const value_iterator_base& other)
       {
         underlying = other.underlying;
         return *this;
@@ -319,7 +321,7 @@ namespace xu
       /**
         @brief  Prefix increment
         */
-      iterator_& operator++()
+      value_iterator_base& operator++()
       {
         underlying++;
         return *this;
@@ -328,9 +330,9 @@ namespace xu
       /**
         @brief  Postfix increment
         */
-      iterator_ operator++(int)
+      value_iterator_base operator++(int)
       {
-        iterator_ res = *this;
+        value_iterator_base res = *this;
         operator++();
         return res;
       }
@@ -338,7 +340,7 @@ namespace xu
       /**
         @brief  Equality
         */
-      bool operator==(const iterator_& other) const
+      bool operator==(const value_iterator_base& other) const
       {
         return underlying == other.underlying;
       }
@@ -346,7 +348,7 @@ namespace xu
       /**
         @brief  Inequality
         */
-      bool operator!=(const iterator_& other) const
+      bool operator!=(const value_iterator_base& other) const
       {
         return underlying != other.underlying;
       }
@@ -354,7 +356,7 @@ namespace xu
       /**
         @brief  Dereference
         */
-      Ret_T& operator*() const
+      Ref_T& operator*() const
       {
         return underlying->second;
       }
@@ -362,7 +364,7 @@ namespace xu
       /**
         @brief  Arrow operator
         */
-      Ret_T* operator->() const
+      Ref_T* operator->() const
       {
         return &underlying->second;
       }
@@ -370,34 +372,50 @@ namespace xu
       /**
         @brief  Conversion from iterator to const_iterator
         */
-      template<typename Und_T_new>
-      operator iterator_<Und_T_new, const Ret_T>() const
+      template <typename Und_T_new>
+      operator value_iterator_base<Und_T_new, const Ref_T>() const
       {
-        return iterator_<Und_T_new, const Ret_T>(underlying);
+        return value_iterator_base<Und_T_new, const Ref_T>(underlying);
       }
     };
 
-    using iterator = iterator_<typename std::unordered_map<intermediate_key_t, Value_T>::iterator, Value_T>;
-    using const_iterator = iterator_<typename std::unordered_map<intermediate_key_t, Value_T>::const_iterator, const Value_T>;
+    using value_iterator = value_iterator_base<typename std::unordered_map<intermediate_key_t, Value_T>::iterator, Value_T>;
+    using const_value_iterator = value_iterator_base<typename std::unordered_map<intermediate_key_t, Value_T>::const_iterator, const Value_T>;
 
-    iterator begin()
+    /**
+      @brief  Returns a value_iterator pointing to the beginning.
+              Used when no template parameter is provided
+      */
+    value_iterator begin()
     {
-      return iterator(ink_to_val.begin());
+      return value_iterator(ink_to_val.begin());
     }
 
-    iterator end()
+    /**
+      @brief  Returns a value_iterator pointing to the end.
+              Used when no template parameter is provided
+      */
+    value_iterator end()
     {
-      return iterator(ink_to_val.end());
+      return value_iterator(ink_to_val.end());
     }
 
-    const_iterator begin() const
+    /**
+      @brief  Returns a const_value_iterator pointing to the beginning.
+              Used when no template parameter is provided
+      */
+    const_value_iterator cbegin() const
     {
-      return const_iterator(ink_to_val.begin());
+      return const_value_iterator(ink_to_val.cbegin());
     }
 
-    const_iterator end() const
+    /**
+      @brief  Returns a const_value_iterator pointing to the end.
+              Used when no template parameter is provided
+      */
+    const_value_iterator cend() const
     {
-      return const_iterator(ink_to_val.end());
+      return const_value_iterator(ink_to_val.cend());
     }
 
   public:
@@ -485,7 +503,7 @@ namespace xu
       @tparam P
               Path index
       */
-    template<unsigned int P>
+    template <unsigned int P>
     size_t size() const
     {
       return std::get<P>(key_to_ink).size();
@@ -502,7 +520,7 @@ namespace xu
       @throw  xu::polykey_map::key_conflict_error
               If key already exists for path
       */
-    template<unsigned int P>
+    template <unsigned int P>
     void insert(const Path_T<P>& key, const Value_T& value)
     {
       static_assert(P < N_Paths);
@@ -546,7 +564,7 @@ namespace xu
       @throw  std::out_of_range
               If key does not exist
       */
-    template<unsigned int P>
+    template <unsigned int P>
     const Value_T& at(const Path_T<P>& key) const
     {
       static_assert(P < N_Paths);
@@ -574,7 +592,7 @@ namespace xu
       @throw  std::out_of_range
               If key does not exist
       */
-    template<unsigned int P>
+    template <unsigned int P>
     Value_T& at(const Path_T<P>& key)
     {
       /* delegate at() */
@@ -600,7 +618,7 @@ namespace xu
       @throw  std::out_of_range
               If neither key exists
       */
-    template<unsigned int P1, unsigned int P2>
+    template <unsigned int P1, unsigned int P2>
     void link(const Path_T<P1>& key1, const Path_T<P2>& key2)
     {
       static_assert(P1 < N_Paths);
@@ -646,7 +664,7 @@ namespace xu
       @param  key
               Key to check
       */
-    template<unsigned int P>
+    template <unsigned int P>
     bool contains(const Path_T<P>& key) const
     {
       static_assert(P < N_Paths);
@@ -672,7 +690,7 @@ namespace xu
       @throw  std::out_of_range
               If first key does not exist
       */
-    template<unsigned int P1, unsigned int P2>
+    template <unsigned int P1, unsigned int P2>
     bool is_linked(const Path_T<P1>& key) const
     {
       static_assert(P1 < N_Paths);
@@ -699,7 +717,7 @@ namespace xu
       @throw  std::out_of_range
               If either key does not exist
       */
-    template<unsigned int P1, unsigned int P2>
+    template <unsigned int P1, unsigned int P2>
     Path_T<P2> convert_key(const Path_T<P1>& key) const
     {
       static_assert(P1 < N_Paths);
@@ -730,7 +748,7 @@ namespace xu
               want to iterate through at the same time
       @note   see stackoverflow question #1198260
       */
-    template<unsigned int P = 0>
+    template <unsigned int P = 0>
     inline typename std::enable_if<P != N_Paths, void>::type _erase(keyset_t& ks)
     {
       /*
@@ -749,7 +767,7 @@ namespace xu
       _erase<P + 1>(ks);
     }
 
-    template<unsigned int P = 0>
+    template <unsigned int P = 0>
     inline typename std::enable_if<P == N_Paths, void>::type _erase(keyset_t& ks)
     {}
 
@@ -763,7 +781,7 @@ namespace xu
       @throw  std::out_of_range
               If key does not exist
       */
-    template<unsigned int P>
+    template <unsigned int P>
     void erase(Path_T<P> key)
     {
       static_assert(P < N_Paths);
@@ -792,7 +810,7 @@ namespace xu
       @param  it
               Valid iterator
       */
-    iterator erase(const iterator& it)
+    value_iterator erase(const value_iterator& it)
     {
       /* first get the intermediate key */
       intermediate_key_t ink = it.underlying->first;

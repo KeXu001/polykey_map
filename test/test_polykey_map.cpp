@@ -53,7 +53,7 @@ using OrderTracker = xu::polykey_map<Order, InternalOrderId_t, ExternalOrderId_t
 
 void outputTest(const OrderTracker& otk)
 {
-  for (auto it = otk.begin(); it != otk.end(); it++)
+  for (auto it = otk.cbegin(); it != otk.cend(); it++)
   {
     std::cout << *it << std::endl;
   }
@@ -94,10 +94,10 @@ int main()
   /* erase */
   otk.erase<ExternalOrderId>("1337");
 
-  OrderTracker::const_iterator cit = otk.begin();
+  OrderTracker::const_value_iterator cit = otk.begin();
 
   /* loop using iterator */
-  for (OrderTracker::iterator it = otk.begin(); it != otk.end(); it++)
+  for (OrderTracker::value_iterator it = otk.begin(); it != otk.end(); it++)
   {
     if (it->ticker == "TSLA")
     {
