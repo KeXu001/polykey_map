@@ -108,6 +108,26 @@ int main()
 
     std::cout << "not erased=" << *cit << std::endl;
     std::cout << "not erased, ticker=" << cit->ticker << std::endl;
+
+    std::cout << "internal id=";
+    if (cit.has_key<InternalOrderId>())
+    {
+      std::cout << cit.get_key<InternalOrderId>() << std::endl;
+    }
+    else
+    {
+      std::cout << "N/A" << std::endl;
+    }
+
+    std::cout << "external id=";
+    if (cit.has_key<ExternalOrderId>())
+    {
+      std::cout << cit.get_key<ExternalOrderId>() << std::endl;
+    }
+    else
+    {
+      std::cout << "N/A" << std::endl;
+    }
   }
 
   /* loop using colon syntax */
