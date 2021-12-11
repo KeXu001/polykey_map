@@ -152,14 +152,14 @@ namespace xu
         @brief  Checks if a key is set
         */
       template<unsigned int P>
-      bool isSet() const
+      bool has_value() const
       {
         return std::get<P>(keys).has_value();
       }
 
       /**
         @brief  Returns copy of key
-        @note   Must only be used after checking isSet() is true. Otherwise,
+        @note   Must only be used after checking has_value() is true. Otherwise,
                 behavior is not defined
         */
       template<unsigned int P>
@@ -171,7 +171,7 @@ namespace xu
       /**
         @brief  Returns copy of intermediate key
         */
-      intermediate_key_t getInk() const
+      intermediate_key_t get_ink() const
       {
         return ink;
       }
@@ -198,7 +198,7 @@ namespace xu
         clear<P>();
 
         /* create copy of other's key */
-        if (other.isSet<P>())
+        if (other.has_value<P>())
         {
           set<P>(other.get<P>());
         }
@@ -627,7 +627,7 @@ namespace xu
         keyset_t& ks =  ink_to_keys.at(it2->second);
         ks.template set<P1>(key1);
 
-        std::get<P1>(key_to_ink).insert(key_ink_pair<P1>(key1, ks.getInk()));
+        std::get<P1>(key_to_ink).insert(key_ink_pair<P1>(key1, ks.get_ink()));
       }
       /* link key2 with existing key1 */
       else if (it1 != std::get<P1>(key_to_ink).end() and it2 == std::get<P2>(key_to_ink).end())
@@ -635,7 +635,7 @@ namespace xu
         keyset_t& ks =  ink_to_keys.at(it1->second);
         ks.template set<P2>(key2);
 
-        std::get<P2>(key_to_ink).insert(key_ink_pair<P2>(key2, ks.getInk()));
+        std::get<P2>(key_to_ink).insert(key_ink_pair<P2>(key2, ks.get_ink()));
       }
     }
 
@@ -687,7 +687,7 @@ namespace xu
 
       auto keys_it = ink_to_keys.find(ink_it->second);
 
-      return keys_it->second.template isSet<P2>();
+      return keys_it->second.template has_value<P2>();
     }
 
     /**
@@ -714,7 +714,7 @@ namespace xu
 
       auto keys_it = ink_to_keys.find(ink_it->second);
 
-      if (!keys_it->second.template isSet<P2>())
+      if (!keys_it->second.template has_value<P2>())
       {
         throw std::out_of_range("polykey_map::convert_key() : key does not exist for second path");
       }
@@ -740,7 +740,7 @@ namespace xu
         */
       static_assert(P < N_Paths);
 
-      if (ks.template isSet<P>())
+      if (ks.template has_value<P>())
       {
         std::get<P>(key_to_ink).erase(ks.template get<P>());
         ks.template clear<P>();
